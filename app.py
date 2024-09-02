@@ -3,7 +3,6 @@ from streamlit_folium import st_folium
 import folium
 import pandas as pd
 from folium.plugins import Fullscreen
-import json
 
 # Set Streamlit page layout to wide mode
 st.set_page_config(layout="wide")
