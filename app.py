@@ -3,6 +3,7 @@ from streamlit_folium import st_folium
 import folium
 import pandas as pd
 from folium.plugins import Fullscreen
+import json
 
 # Set Streamlit page layout to wide mode
 st.set_page_config(layout="wide")
@@ -26,13 +27,44 @@ for loc in st.session_state['locations']:
     folium.Marker([loc['Latitude'], loc['Longitude']],
                   tooltip=loc['Description']).add_to(m)
 
-# Display the map and capture the click event
-output = st_folium(m, width=1100, height=700)  # Increase width and height
+# Add custom JavaScript to handle click events
+click_script = """
+    function onMapClick(e) {
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+        // Send the click event to Streamlit using custom event
+        const customEvent = new CustomEvent('mapClick', {
+            detail: { lat, lon },
+            bubbles: true,
+        });
+        document.dispatchEvent(customEvent);
+    }
+    map.on('click', onMapClick);
+"""
 
-# If a location is clicked, allow user to add a description
-if output.get('last_clicked'):
-    lat = output['last_clicked']['lat']
-    lon = output['last_clicked']['lng']
+# Display the map and capture the click event
+output = st_folium(m, width=1100, height=700, height=700)
+
+# JavaScript to catch the custom event and send data to Streamlit
+st.markdown(
+    """
+    <script>
+    document.addEventListener('mapClick', function(event) {
+        const lat = event.detail.lat;
+        const lon = event.detail.lon;
+        window.parent.postMessage({ lat: lat, lon: lon }, "*");
+    });
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
+# Capture message from JavaScript
+message = st.experimental_get_query_params()
+
+if 'lat' in message and 'lon' in message:
+    lat = float(message['lat'][0])
+    lon = float(message['lon'][0])
     
     # Create input fields for description
     with st.form(key='location_form'):
