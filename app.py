@@ -20,7 +20,7 @@ Fullscreen().add_to(m)
 
 # Add existing pinned locations to the map
 for loc in st.session_state['locations']:
-    folium.Marker([loc['Latitude'], loc['Longitude']], tooltip=loc['Description']).add_to(m)
+    folium.Marker([loc['Latitude'], loc['Longitude']], tooltip=loc['Address']).add_to(m)
 
 # Display the map and capture the click event
 output = st_folium(m, width=900, height=600)  # Maximize width and height
@@ -28,13 +28,8 @@ output = st_folium(m, width=900, height=600)  # Maximize width and height
 # If a location is clicked, add it to the list
 if output.get('last_clicked'):
     lat, lon = output['last_clicked']['lat'], output['last_clicked']['lng']
-    
-    # Prompt user for a description
-    description = st.text_input("Enter a description for the pinned location:", key=f"desc_{lat}_{lon}")
-    
-    if st.button("Save Location", key=f"save_{lat}_{lon}"):
-        st.session_state['locations'].append({'Description': description, 'Latitude': lat, 'Longitude': lon})
-        st.experimental_rerun()  # Rerun the app to display the updated markers
+    st.session_state['locations'].append({'Address': f'Pinned at {lat:.5f}, {lon:.5f}', 'Latitude': lat, 'Longitude': lon})
+    st.experimental_rerun()  # Rerun the app to display the updated markers
 
 # Display the location data as a table
 if st.session_state['locations']:
