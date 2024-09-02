@@ -43,7 +43,7 @@ click_script = """
 """
 
 # Display the map and capture the click event
-output = st_folium(m, width=1100, height=700, height=700)
+output = st_folium(m, width=1100, height=700)
 
 # JavaScript to catch the custom event and send data to Streamlit
 st.markdown(
