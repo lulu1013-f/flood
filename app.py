@@ -18,13 +18,14 @@ m = folium.Map(location=[47.92123, 106.918556], zoom_start=12)
 for loc in st.session_state['locations']:
     folium.Marker([loc['Latitude'], loc['Longitude']], tooltip=loc['Address']).add_to(m)
 
-# Function to handle map click event
-def handle_click(event):
-    lat, lon = event['latlng']
-    st.session_state['locations'].append({'Address': f'Pinned at {lat:.5f}, {lon:.5f}', 'Latitude': lat, 'Longitude': lon})
+# Display the map and capture the click event
+output = st_folium(m, width=700, height=500)
 
-# Add the map click handler
-st_folium(m, width=700, height=500, callback=handle_click)
+# If a location is clicked, add it to the list
+if output.get('last_clicked'):
+    lat, lon = output['last_clicked']['lat'], output['last_clicked']['lng']
+    st.session_state['locations'].append({'Address': f'Pinned at {lat:.5f}, {lon:.5f}', 'Latitude': lat, 'Longitude': lon})
+    st.experimental_rerun()  # Rerun the app to display the updated markers
 
 # Display the location data as a table
 if st.session_state['locations']:
@@ -39,14 +40,3 @@ if st.session_state['locations']:
         file_name='pinned_locations.csv',
         mime='text/csv'
     )
-
-# Create a map object using streamlit-folium to capture events
-m = folium.Map(location=[47.92123, 106.918556], zoom_start=12)
-
-# Add a Folium map display in Streamlit
-output = st_folium(m, width=700, height=500)
-if output['last_clicked']:
-    # Get the clicked location details
-    lat, lon = output['last_clicked']['lat'], output['last_clicked']['lng']
-    st.session_state['locations'].append({'Address': f'Pinned at {lat:.5f}, {lon:.5f}', 'Latitude': lat, 'Longitude': lon})
-    st.experimental_rerun() # Rerun the app to display updated markers
