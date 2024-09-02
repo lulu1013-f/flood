@@ -4,3 +4,4 @@ folium
 pandas
 openpyxl
 streamlit_folium
+json
