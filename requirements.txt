@@ -3,4 +3,4 @@ geopy
 folium
 pandas
 openpyxl
-streamlit-folium
+streamlit_folium
