@@ -1,0 +1,97 @@
+library(readxl)
+library(openxlsx)
+library(lubridate)
+
+exo_data = read_excel("Counterparty_pd_24Q3.xlsx", sheet = "Sheet1")
+
+#S&P default rate temporal disaggregation
+library(tempdisagg)
+library(readxl)
+df <- read_excel("S&amp;P default_2023.xlsx")
+df <- df[27:nrow(df),]
+ts1 <- ts(df$`Default rate (%)`/100, start = 2007, end = 2023)
+m3<- td(ts1 ~ 0, conversion = "average",to = "quarterly", method = "denton-cholette")
+a <- predict(m3)
+
+library(tseries)
+library(forecast)
+library(tidyverse)
+
+y <- ts(predict(m3),start= c(2007,1), frequency = 4)
+
+library(vars)
+exo_data$Y[(length(exo_data$Y)-3): length(exo_data$Y)] <- y[(length(y)-3):length(y)]
+
+### Significant variables
+data_y = c()
+for (i in 3:length(exo_data)) {
+  resgr = grangertest(ts(exo_data[,i],start = c(2007,1),frequency = 4),y,order = 1)
+  if (resgr[4]$`Pr(>F)`[2] <= 0.05) {
+    data_y = cbind(data_y,colnames(exo_data[,i]))
+  }
+}
+
+data_y
+
+##### y model
+x2  <-ts(exo_data$x2, start = c(2007,1) , frequency = 4)
+x13 <- ts(exo_data$x13, start = c(2007,1) , frequency = 4)
+x7 <- ts(exo_data$x7, start = c(2007,1) , frequency = 4)
+x11 <- ts(exo_data$x11, start = c(2007,1) , frequency = 4)
+
+data = cbind(x2,x7, x11,x13,y)
+lagselect <- VARselect(data,lag.max = 2, type = "const")
+
+lagselect$selection
+
+model <- VAR(data, p=1, type="const", season =NULL , exog=NULL)
+
+summary(model)
+
+
+arch.test(model)
+serial.test(model,type = "PT.asymptotic")
+
+pred = predict(model, n.ahead = 7, ci = 0.50)
+
+plot(pred)
+
+pred$fcst$y
+
+#### Forecast FPD  to dataframe and save to excel
+y_pred = ts(c(as.numeric(y),pred$fcst$y[,1]),start = c(2007,1), frequency = 4)
+y_lower_pred = ts(c(as.numeric(y),pred$fcst$y[,2]),start = c(2007,1), frequency = 4)
+y_upper_pred = ts(c(as.numeric(y),pred$fcst$y[,3]),start = c(2007,1), frequency = 4)
+x2_pred = ts(c(as.numeric(x2),pred$fcst$x2[,1]),start = c(2007,1), frequency = 4)
+x13_pred = ts(c(as.numeric(x13),pred$fcst$x13[,1]),start = c(2007,1), frequency = 4)
+x7_pred = ts(c(as.numeric(x7),pred$fcst$x7[,1]),start = c(2007,1), frequency = 4)
+x11_pred = ts(c(as.numeric(x11),pred$fcst$x11[,1]),start = c(2007,1), frequency = 4)
+
+
+DATE = Sys.Date()
+
+DATE[1] = ymd("2007-03-01")
+while(DATE[length(DATE)] < ymd("2025-12-01")){
+  DATE[length(DATE) + 1] = DATE[length(DATE)] + months(3)
+  print(DATE[length(DATE)])
+}
+
+
+y_fsct_df = data.frame(DATE = DATE, y=y_pred)
+y_lower_df = data.frame(DATE = DATE, y_lower=y_lower_pred)
+y_upper_df = data.frame(DATE = DATE,y_upper = y_upper_pred)
+x2_fsct_df = data.frame(DATE = DATE, x2=x2_pred)
+x13_fsct_df = data.frame(DATE = DATE, x13=x13_pred)
+x7_fsct_df = data.frame(DATE = DATE, x7=x7_pred)
+x11_fsct_df = data.frame(DATE = DATE, x11=x11_pred)
+
+
+FACTORS_REAL = merge(merge(merge(merge(merge(merge(y_fsct_df,y_lower_df,all = TRUE),y_upper_df, all = TRUE),
+x2_fsct_df, all = TRUE),
+                     x13_fsct_df, all = TRUE), x7_fsct_df, all = TRUE), x11_fsct_df, all = TRUE)
+
+
+file = paste("counterparty_pd_24Q3.xlsx", sep = "")
+library(writexl)
+write_xlsx(FACTORS_REAL, file)
+
